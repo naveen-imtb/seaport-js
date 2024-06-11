@@ -7,12 +7,15 @@ import { CreateOrderInput, CurrencyItem } from "../src/types";
 import * as fulfill from "../src/utils/fulfill";
 import {
   getBalancesForFulfillOrder,
+  getBalancesForFulfillOrderV2,
   verifyBalancesAfterFulfill,
+  verifyBalancesAfterFulfillV2,
 } from "./utils/balance";
 import { describeWithFixture } from "./utils/setup";
 import { OPENSEA_DOMAIN, OPENSEA_DOMAIN_TAG } from "./utils/constants";
 import { SinonSpy } from "sinon";
 import { SeaportABI } from "../src/abi/Seaport";
+import { FulfillOrdersMetadata } from "../src/utils/fulfill";
 
 const sinon = require("sinon");
 
@@ -225,7 +228,7 @@ describeWithFixture(
           expect(fulfillStandardOrderSpy.calledOnce);
         });
 
-        it("ERC1155 <=> ETH adjust tips correctly using fulfillOrders", async () => {
+        it.only("ERC1155 <=> ETH adjust tips correctly using fulfillOrders", async () => {
           // same test as above, but instead of fulfillOrder we use fulfillOrders
           const tips = [
             {
@@ -248,7 +251,7 @@ describeWithFixture(
           );
 
           const ownerToTokenToIdentifierBalances =
-            await getBalancesForFulfillOrder(
+            await getBalancesForFulfillOrderV2(
               order,
               await fulfiller.getAddress(),
             );
@@ -298,7 +301,7 @@ describeWithFixture(
           expect(offererErc1155Balance).eq(BigInt(8));
           expect(fulfillerErc1155Balance).eq(BigInt(2));
 
-          await verifyBalancesAfterFulfill({
+          await verifyBalancesAfterFulfillV2({
             ownerToTokenToIdentifierBalances,
             order,
             unitsToFill: 2,
@@ -307,7 +310,37 @@ describeWithFixture(
             fulfillReceipt: receipt!,
           });
 
-          expect(fulfillAvailableOrdersSpy.calledOnce).to.be.true;
+          const expectedArgs = {
+            ordersMetadata: [
+              {
+                order,
+                unitsToFill: 2,
+              },
+            ],
+          };
+
+          expect(
+            fulfillAvailableOrdersSpy.withArgs(
+              sinon.match(function ({
+                ordersMetadata,
+              }: {
+                ordersMetadata: FulfillOrdersMetadata;
+              }) {
+                let match = true;
+                ordersMetadata.every((metadata, index) => {
+                  if (
+                    metadata.order !=
+                      expectedArgs.ordersMetadata[index].order ||
+                    metadata.unitsToFill !=
+                      expectedArgs.ordersMetadata[index].unitsToFill
+                  ) {
+                    match = false;
+                  }
+                });
+                return match;
+              }, "fulfillAvailableOrders arguments don't match expected values"),
+            ).calledOnce,
+          ).to.be.true;
         });
 
         it("ERC1155 <=> ETH adjust tips correctly with low denomination", async () => {

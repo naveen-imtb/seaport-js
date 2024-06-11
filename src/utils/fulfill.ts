@@ -577,13 +577,7 @@ export function fulfillAvailableOrders({
   const adjustTips = (orderMetadata: {
     order: Order;
     unitsToFill?: BigNumberish;
-    orderStatus: OrderStatus;
-    offerCriteria: InputCriteria[];
-    considerationCriteria: InputCriteria[];
     tips: ConsiderationItem[];
-    extraData: string;
-    offererBalancesAndApprovals: BalancesAndApprovals;
-    offererOperator: string;
   }): ConsiderationItem[] => {
     if (!orderMetadata.tips || !orderMetadata.tips.length) {
       return [];
